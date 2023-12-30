@@ -1,0 +1,242 @@
+?start      :  compilationunit
+
+WHITESPACE       :  "\\u0020" | "\\u0009" | "\\u000d" | "\\u000a"
+UPPER            :  /[A-Z]/ | "$" 
+LOWER            :  /[a-z]/| "_" 
+LETTER           :  UPPER | LOWER
+DIGIT            :  /[0-9]/
+PAREN            :  "(" | ")" | "[" | "]" | "{" | "}"
+DELIM            :  "`" | "'" | "\"" | "." | ";" | ","
+OPCHAR           :  "!" | "#" | "%" | "&" | "*" | "+" | "-" | "/" | ":" | "<" | "=" | ">" | "*" | "@" | "\\" | "^" | "|" | "~"
+PRINTABLECHAR    :  /[\s|\S]+/
+UNICODEESCAPE    :  "\\" "u" ("u")* HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT
+HEXDIGIT         :  /([A-F]|[0-9]|[a-f])/
+CHARESCAPESEQ    :  "\\" ("b" | "t" | "n" | "f" | "r" | "\"" | "'" | "\\")
+ESCAPESEQ        :  UNICODEESCAPE | CHARESCAPESEQ
+
+OP               :  OPCHAR (OPCHAR)*
+VARID            :   /(?!abstract|case|catch|class|def|do|else|enum|export|extends|false|final|finally|for|given|if|implicit|import|lazy|match|new|null|object|override|package|private|protected|return|sealed|super|then|throw|trait|true|try|type|val|var|while|with|yield)[a-z_](\w|\$)*|(abstract|case|catch|class|def|do|else|enum|export|extends|false|final|finally|for|given|if|implicit|import|lazy|match|new|null|object|override|package|private|protected|return|sealed|super|then|throw|trait|true|try|type|val|var|while|with|yield)(\w|\$)+/ ["_" OP]
+BOUNDVARID       :  VARID
+                   |  "`" VARID "'"
+PLAINID          :  ALPHAID
+                   |  OP
+ID               :  PLAINID
+                   |  "`" (CHATNOBACKQUOTEORNEWLINE | ESCAPESEQ)* "'"
+IDREST           :  (LETTER | DIGIT)* ["_" OP]
+SPLICIID         :  "$" ALPHAID ";"
+
+INTEGERNUMERAL   :  (DECIMALNUMERAL | HEXNUMERAL) ["L" | "l"]
+DECIMALNUMERAL   :  "0" | DIGIT [(DIGIT | "_")* DIGIT]
+HEXNUMERAL       :  "0" ("x" | "X") HEXDIGIT [(HEXDIGIT | "_")* HEXDIGIT]
+
+FLOATINGPOINTLITERAL :  [DECIMALNUMERAL] "." DIGIT [(DIGIT | "_")* DIGIT] [EXPONENTPART] [FLOATTYPE]
+                   |  DECIMALNUMERAL EXPONENTPART [FLOATTYPE]
+                   |  DECIMALNUMERAL FLOATTYPE
+EXPONENTPART     :  ("e" | "E") ["+" | "-"] DIGIT [(DIGIT | "_")* DIGIT]
+FLOATTYPE        :  "f" | "F" | "d" | "D"
+
+BOOLEANLITERAL   :  "true" | "false"
+
+CHARCTERLITERAL :  "'" (CHARNOQUOTEORNEWLINE | ESCAPESEQ) "'"
+
+STRINGLITERAL    :  "\"" (STRINGELEMENT)* "\""
+                   |  "\"\"\"" MULTLINCHARCTER "\"\"\""
+STRINGELEMENT    :  CHARNODOUBLEQUOTEORNEWLINE
+                   |  ESCAPESEQ
+MULTLINCHARCTER   :  (["\""] ["\""] CHARNODOUBLEQUOTE)* ("\"")*
+
+ALPHAID          :  UPPER IDREST
+                   |  VARID
+
+COMMENT          :  "/*" /(.|\n)*?/ "*/"
+                   |  "//" /[^\n]*/
+
+NL               :  /\n/
+SEMI             :  ";" |  NL (NL)*
+
+CHATNOBACKQUOTEORNEWLINE : /^['|\n]/
+
+CHARNODOUBLEQUOTEORNEWLINE : /^["|\n]/
+
+CHARNODOUBLEQUOTE : /^["]/
+
+CHARNOQUOTEORNEWLINE:  /^['|\n]/
+
+COLON         :  ":"
+
+SIMPLELITERAL     :  ["-"] INTEGERNUMERAL
+                    |  ["-"] FLOATINGPOINTLITERAL
+                    |  BOOLEANLITERAL
+                    |  CHARCTERLITERAL
+                    |  STRINGLITERAL
+LITERAL           :  SIMPLELITERAL
+                    |  "null"
+
+QUALID            :  ID ("." ID)*
+ids               :  ID ("," ID)*
+
+simplelef         :  ID
+
+type              :  funtype                         
+                    |  infixtype
+funtype           :  funtypeargs ("=>" | "?=>") type                  
+
+funtypeargs       :  infixtype
+                    |  "(" [ funargtypes ] ")"
+                    |  funparamclause
+funparamclause    :  "(" typedfunparam ("," typedfunparam)* ")"
+typedfunparam     :  ID ":" type
+infixtype         :  refinedtype    
+refinedtype       :  annottype            
+annottype         :  simpletype                      
+
+simpletype        :  SIMPLELITERAL                                   
+                    |  simpletype1
+simpletype1       :  ID                                                       
+                    |  "(" types ")"                                                                                                                  
+                    |  simpletype1 typeargs                         
+                      
+funargtype        :  type
+                    |  "=>" type                                
+funargtypes       :  funargtype ( "," funargtype )*
+
+paramtype         :   type           //add these three
+                    |  "=>" type
+                    |  type "*"
+
+typeargs          :  "[" types "]"                                
+                 
+typeparambounds   :  (":" type)*           
+types             :  type ("," type)*
+
+expr              :  expr1
+blockresult.1       :  expr1
+
+expr1             :  ifexpr  
+                    |  whileexpr 
+                    |  assignexpr                                                      
+                    |  postfixexpr [ascription]
+
+ifexpr            :  "if" "(" expr ")" (NL)* expr [[SEMI] "else" expr] 
+                    |  "if"  expr "then" expr [[SEMI] "else" expr]   
+whileexpr         :  "while" "(" expr ")" (NL)* expr                                       
+assignexpr         :  ID "=" expr
+
+
+ascription        :  ":" infixtype                                                                 
+postfixexpr       :  infixexpr [ID]                                        
+infixexpr         :  prefixexpr
+                    |  infixexpr ID [NL] infixexpr                            
+                    |  infixexpr matchclause
+matchclause       : "match" "{" caseclauses "}"                      
+prefixexpr        :  [PREFIXOPERATER] simpleexpr                           
+PREFIXOPERATER    :  "-" | "+" | "~" | "!"                                   
+simpleexpr        :  simplelef
+                    |  LITERAL
+                    |  "_"
+                    |  blockexpr                                             
+                    |  "(" expresinparens ")"                           
+                    |  simpleexpr typeargs                                    
+                    |  simpleexpr argumentexprs                                                          
+                    |  simpleexpr "_"
+                                           
+expresinparens     :  exprinparens ("," exprinparens)*
+exprinparens      :  postfixexpr ":" type                                  
+                    |  expr
+parargumentexprs  :  "(" [expresinparens] ")"                     
+                    |  "(" [expresinparens ","] postfixexpr "*" ")"           
+argumentexprs     :  parargumentexprs
+                    |  blockexpr
+
+blockexpr         :  "{" (NL)* (caseclauses | block) (NL)* "}"
+
+block             :  (blockstat SEMI)* [blockresult]                       
+blockstat         : (LOCALMODIFIER)* oridef
+                    |  expr1
+
+
+caseclauses       :  caseclause ( caseclause )*                             
+caseclause        :  "case" patern "=>" block                      
+typecaseclauses   :  typecaseclause ( typecaseclause )*
+typecaseclause    :  "case" (infixtype | "_") "=>" type [SEMI]
+
+patern           :  patern1 ( "|" patern1 )*                              
+patern1          :  patern2
+patern2          :  infixpatern                                  
+infixpatern      :  simplepatern ( ID [NL] simplepatern )*         
+simplepatern     :  patvar                                                
+                    |  LITERAL                                          
+                    |  "(" [paterns] ")"                                  							
+                    |  simplepatern1 [typeargs] [argumentpaterns]
+
+simplepatern1    :  simplelef
+patvar            :  VARID
+                    |  "_"
+paterns          :  patern ("," patern)*
+argumentpaterns  :  "(" [paterns] ")"                                     
+                    |  "(" [paterns ","] patvar "*" ")"
+
+
+clstypeparamclause:  "[" clstypeparam ("," clstypeparam)* "]"
+clstypeparam      :  ID typeparambounds                
+
+
+clsparamclauses   :  (clsparamclause)* [[NL] "(" clsparams ")"]
+clsparamclause    :  [NL] "(" clsparams ")"
+clsparams         :  clsparam ("," clsparam)*
+clsparam          :  [(modifier)* ("val" | "var")] param
+
+defparamclauses   :  defparamclause ( defparamclause )* //two DefTypeParamClause cannot be adjacent
+defparamclause    :  deftypeparamclause
+                    |  deftermparamclause
+
+deftypeparamclause:  [NL] "[" deftypeparam ("," deftypeparam)* "]"
+deftypeparam      :  ID typeparambounds
+deftermparamclause:  [NL] "(" [deftermparams] ")"
+
+
+deftermparams     : deftermparam ("," deftermparam)*
+deftermparam      : param                 
+param             :  ID ":" paramtype ["=" expr]                           
+
+modifier          :  LOCALMODIFIER
+                    |  "override"
+                    |  "opaque"
+LOCALMODIFIER     :  "abstract"
+                    |  "final"
+                    |  "sealed"
+                    |  "open"
+                    |  "implicit"
+                    |  "lazy"
+                    |  "inline"
+
+oridef               :  "val" patdef
+                    |  "var" patdef
+                    |  "def" defdef
+                    |  tmpldef
+patdef            :  ids [":" type] ["=" expr]
+                    |  patern2 [":" type] ["=" expr]                         
+defdef            : ID [defparamclauses] [":" type] ["=" expr]                           
+
+tmpldef           :  (["case"] "class" | "trait") clasdef
+                    |  ["case"] "object" objectdef
+
+clasdef          :  ID clasconstr [template]
+clasconstr       :  [clstypeparamclause] clsparamclauses      
+objectdef         :  ID [template]
+
+template          :  [templatebody]
+
+templatebody      :  [NL] "{" templatestat (SEMI templatestat)* "}"
+templatestat      : (modifier)* oridef
+                    |  expr1
+
+topstatus          :  topstat (SEMI topstat)*
+topstat           :  (modifier)* oridef
+
+compilationunit   :  ("package" QUALID SEMI)* topstatus
+
+%import common.WS
+
+%ignore COMMENT
+%ignore WS

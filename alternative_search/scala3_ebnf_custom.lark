@@ -1,0 +1,419 @@
+?start      :  compilationunit
+
+WHITESPACE       :  "\\u0020" | "\\u0009" | "\\u000d" | "\\u000a"
+UPPER            :  /[A-Z]/ | "$" 
+LOWER            :  /[a-z]/| "_" 
+LETTER           :  UPPER | LOWER
+DIGIT            :  /[0-9]/
+PAREN            :  "(" | ")" | "[" | "]" | "{" | "}"
+DELIM            :  "`" | "'" | "\"" | "." | ";" | ","
+OPCHAR           :  "!" | "#" | "%" | "&" | "*" | "+" | "-" | "/" | ":" | "<" | "=" | ">" | "*" | "@" | "\\" | "^" | "|" | "~"
+PRINTABLECHAR    :  /[\s|\S]+/
+UNICODEESCAPE    :  "\\" "u" ("u")* HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT
+HEXDIGIT         :  /([A-F]|[0-9]|[a-f])/
+CHARESCAPESEQ    :  "\\" ("b" | "t" | "n" | "f" | "r" | "\"" | "'" | "\\")
+ESCAPESEQ        :  UNICODEESCAPE | CHARESCAPESEQ
+
+OP               :  OPCHAR (OPCHAR)*
+VARID            :  /(?!abstract|case|catch|class|def|do|else|enum|export|extends|false|final|finally|for|given|if|implicit|import|lazy|match|new|null|object|override|package|private|protected|return|sealed|super|then|throw|trait|true|try|type|val|var|while|with|yield)[a-z_](\w|\$)*|(abstract|case|catch|class|def|do|else|enum|export|extends|false|final|finally|for|given|if|implicit|import|lazy|match|new|null|object|override|package|private|protected|return|sealed|super|then|throw|trait|true|try|type|val|var|while|with|yield)(\w|\$)+/ ["_" OP]
+                    //LOWER IDREST
+BOUNDVARID       :  VARID
+                   |  "`" VARID "'"
+PLAINID          :  ALPHAID
+                   |  OP
+ID               :  PLAINID
+                   |  "`" (CHATNOBACKQUOTEORNEWLINE | ESCAPESEQ)* "`"
+IDREST           :  (LETTER | DIGIT)* ["_" OP]
+quotedid          :  "'" ALPHAID
+spliceid         :  "$" ALPHAID ";"
+
+INTEGERNUMERAL   :  (DECIMALNUMERAL | HEXNUMERAL) ["L" | "l"]
+DECIMALNUMERAL   :  "0" | DIGIT [(DIGIT | "_")* DIGIT]
+HEXNUMERAL       :  "0" ("x" | "X") HEXDIGIT [(HEXDIGIT | "_")* HEXDIGIT]
+
+FLOATINGPOINTLITERAL :  [DECIMALNUMERAL] "." DIGIT [(DIGIT | "_")* DIGIT] [EXPONENTPART] [FLOATTYPE]
+                   |  DECIMALNUMERAL EXPONENTPART [FLOATTYPE]
+                   |  DECIMALNUMERAL FLOATTYPE
+EXPONENTPART     :  ("e" | "E") ["+" | "-"] DIGIT [(DIGIT | "_")* DIGIT]
+FLOATTYPE        :  "f" | "F" | "d" | "D"
+
+BOOLEANLITERAL   :  "true" | "false"
+
+CHARCTERLITERAL :  "'" (CHARNOQUOTEORNEWLINE | ESCAPESEQ) "'"
+
+STRINGLITERAL    :  "\"" (STRINGELEMENT)* "\""
+                   |  "\"\"\"" MULTLINCHARCTER "\"\"\""
+STRINGELEMENT    :  CHARNODOUBLEQUOTEORNEWLINE
+                   |  ESCAPESEQ
+MULTLINCHARCTER   :  (["\""] ["\""] CHARNODOUBLEQUOTE)* ("\"")*
+
+interpolatedstring :  ALPHAID "\"" (["\\"] interpolatedstringpart | "\\\\" | "\\\"")* "\""
+                   |  ALPHAID "\"\"\"" (["\""] PRINTABLECHAR ("\"" | "\$") | escape)* ("\"")* "\"\"\""
+                   
+interpolatedstringpart: PRINTABLECHAR ("\"" | "$" | "\\") | escape
+
+escape           :  "\\$\\$"
+                   |  "\\$\""
+                   |  "\\$" ALPHAID
+                   |  "\\$" blockexpr
+ALPHAID          :  UPPER IDREST
+                   |  VARID
+
+COMMENT          :  "/*" /(.|\n)*?/ "*/"
+                   |  "//" /[^\n]*/
+
+NL               :  /\n/
+SEMI             :  ";" |  NL (NL)*
+
+CHATNOBACKQUOTEORNEWLINE : /^['|\n]/
+
+CHARNODOUBLEQUOTEORNEWLINE : /^["|\n]/
+
+CHARNODOUBLEQUOTE : /^["]/
+
+CHARNOQUOTEORNEWLINE:  /^['|\n]/
+
+COLON         :  ":"
+
+SIMPLELITERAL     :  ["-"] INTEGERNUMERAL
+                    |  ["-"] FLOATINGPOINTLITERAL
+                    |  BOOLEANLITERAL
+                    |  CHARCTERLITERAL
+                    |  STRINGLITERAL
+LITERAL           :  SIMPLELITERAL
+                    //|  interpolatedSTRINGLITERAL
+                    // |  symboLITERAL
+                    |  "null"
+
+qualid            :  ID ("." ID)*
+ids               :  ID ("," ID)*
+
+simplelef         :  ID
+                    |  [ID "."] "this"
+                    |  [ID "."] "super" [classquorifier] "." ID
+
+classquorifier    :  "[" ID "]"
+
+type              :  funtype
+                    |  hktypeparamclause "=>>" type                           
+                    |  funparamclause "=>>" type                              
+                    |  matchtype
+                    |  infixtype
+funtype           :  funtypeargs ("=>" | "?=>") type                  
+                    |  hktypeparamclause "=>" type                            
+funtypeargs       :  infixtype
+                    |  "(" [ funargtypes ] ")"
+                    |  funparamclause
+funparamclause    :  "(" typedfunparam ("," typedfunparam)* ")"
+typedfunparam     :  ["erased"] ID ":" type
+matchtype         :  infixtype "match" "<<<" typecaseclauses ">>>"
+                    | infixtype "match" "{" typecaseclauses "}"
+infixtype         :  refinedtype (ID [NL] refinedtype)*      
+refinedtype       :  annottype ([NL] refinement)*               
+annottype         :  simpletype (anotation)*                        
+
+simpletype        :  SIMPLELITERAL                                   
+                    |  "?" typebounds
+                    |  simpletype1
+simpletype1       :  ID                                          
+                    |  singleton "." ID                        
+                    |  singleton "." "type"                        
+                    |  "(" types ")"                                      
+                    |  refinement                                         
+                    |  typesplice                                          
+                    |  simpletype1 typeargs                         
+                    |  simpletype1 "#" ID                              
+singleton         :  simplelef
+                    |  SIMPLELITERAL
+                    |  singleton "." ID
+funargtype        :  ["erased"] type
+                    |  ["erased"] "=>" type                                
+funargtypes       :  funargtype ( "," funargtype )*
+
+paramtype         :   type           //add these three
+                    |  "=>" type
+                    |  type "*"
+                    |["=>"] paramvaluetype
+paramvaluetype    :  ["into"] exactparamtype        
+exactparamtype    :  paramvaluetype ["*"]   
+
+typeargs          :  "[" types "]"                                
+refinement        :  ":" "<<<" [refinedef] (SEMI [refinedef])*  ">>>" 
+                    | [NL] "{" [refinedef] (SEMI [refinedef])*  "}"       
+typebounds        :  [">:" type] ["<:" type]                
+typeparambounds   :  typebounds (":" type)*           
+types             :  type ("," type)*
+
+expr              :  funparams ("=>" | "?=>") expr    //here                     
+                    |  hktypeparamclause "=>" expr                        
+                    |  expr1
+blockresult       :  funparams ("=>" | "?=>") block //here 
+                    |  hktypeparamclause "=>" block
+                    |  expr1
+funparams         :  bindings
+                    |  ["erased"] ID
+                    |  "_"
+expr1             :  ["inline"] "if" "(" expr ")" (NL)* expr [[SEMI] "else" expr] 
+                    |  ["inline"] "if"  expr "then" expr [[SEMI] "else" expr]   
+                    |  "while" "(" expr ")" (NL)* expr                          
+                    |  "while" expr "do" expr                                 
+                    |  "try" expr catches ["finaly" expr]                   
+                    |  "try" expr ["finaly" expr]                            
+                    |  "throw" expr                                           
+                    |  "return" [expr]                                         
+                    |  forexpr
+                    |  [simpleexpr "."] ID "=" expr                      
+                    |  PREFIXOPERATER simpleexpr "=" expr                   
+                    |  simpleexpr argumentexprs "=" expr                  
+                    |  postfixexpr [ascription]
+                    |  "inline" infixexpr matchclause
+ascription        :  ":" infixtype                                          
+                    |  ":" anotation (anotation)*                           
+catches           :  "catch" (expr | exprcaseclause)
+postfixexpr       :  infixexpr [ID]                                        
+infixexpr         :  prefixexpr
+                    |  infixexpr ID [NL] infixexpr                            
+                    |  infixexpr ID colonargument
+                    |  infixexpr matchclause
+matchclause       :  "match" "<<<" caseclauses ">>>"    
+                    | "match" "{" caseclauses "}"                      
+prefixexpr        :  [PREFIXOPERATER] simpleexpr                           
+PREFIXOPERATER    :  "-" | "+" | "~" | "!"                                   
+simpleexpr        :  simplelef
+                    |  LITERAL
+                    |  "_"
+                    |  blockexpr
+                    |  exprsplice
+                    |  quoted
+                    |  quotedid                                                
+                    |  "new" constrap ("with" constrap)* [templatebody]     
+                    |  "new" templatebody
+                    |  "(" expresinparens ")"                                  
+                    |  simpleexpr "." ID                                      
+                    |  simpleexpr "." matchclause
+                    |  simpleexpr typeargs                                    
+                    |  simpleexpr argumentexprs                              
+                    |  simpleexpr colonargument                              
+                    |  simpleexpr "_"                                           
+                    //|  xmlexpr							
+colonargument     :  COLON [lambdastart] "<<<" (caseclauses | block) ">>>" //outdent
+                    | COLON [lambdastart] "{" (caseclauses | block) "}" //outdent
+lambdastart       :  funparams ("=>" | "?=>") //here 
+                    |  hktypeparamclause "=>"
+quoted            :  "'" "{" block "}"
+                    |  "'" "[" type "]"
+exprsplice        : spliceid                                              
+                    |  "$" "{" block "}"                                     
+                    |  "$" "{" patern "}"                                  
+typesplice        : spliceid                                                 
+                    |  "$" "{" block "}"                                     
+                    |  "$" "{" patern "}"                                    
+expresinparens     :  exprinparens ("," exprinparens)*
+exprinparens      :  postfixexpr ":" type                                  
+                    |  expr
+parargumentexprs  :  "(" [expresinparens] ")"                     
+                    |  "(" "using" expresinparens ")"
+                    |  "(" [expresinparens ","] postfixexpr "*" ")"           
+argumentexprs     :  parargumentexprs
+                    |  blockexpr
+
+blockexpr         :  "<<<" (caseclauses | block) ">>>"
+                    | "{" (NL)* (caseclauses | block) (NL)* "}"
+
+block             :  (blockstat SEMI)* [blockresult]                       
+blockstat         :  import
+                    |  (anotation (NL)*)* (LOCALMODIFIER)* def
+                    |  extension
+                    |  expr1
+                    |  endmarker
+
+forexpr           :  "for" "(" enumerators0 ")" (NL)* ["do" | "yield"] expr   
+                    |  "for" "{" enumerators0 "}" (NL)* ["do" | "yield"] expr
+                    |  "for"     enumerators0          ("do" | "yield") expr
+enumerators0      :  (NL)* enumerators [SEMI]
+enumerators       :  generator (SEMI enumerator | guard)*
+enumerator        :  generator
+                    |  guard (guard)*
+                    |  patern1 "=" expr                                      
+generator         :  ["case"] patern1 "<-" expr                         
+guard             :  "if" postfixexpr
+
+caseclauses       :  caseclause ( caseclause )*                             
+caseclause        :  "case" patern [guard] "=>" block                      
+exprcaseclause    :  "case" patern [guard] "=>" expr
+typecaseclauses   :  typecaseclause ( typecaseclause )*
+typecaseclause    :  "case" (infixtype | "_") "=>" type [SEMI]
+
+patern           :  patern1 ( "|" patern1 )*                              
+patern1          :  patvar ":" refinedtype                                  
+                    |  ["-"] INTEGERNUMERAL ":" refinedtype                  
+                    |  ["-"] FLOATINGPOINTLITERAL ":" refinedtype            
+                    |  patern2
+patern2          :  [ID "@"] infixpatern                                  
+infixpatern      :  simplepatern ( ID [NL] simplepatern )*              
+simplepatern     :  patvar                                                
+                    |  LITERAL                                          
+                    |  "(" [paterns] ")"                                  
+                    |  quoted
+                    //|  xmlpatern										
+                    |  simplepatern1 [typeargs] [argumentpaterns]
+                    |  "given" refinedtype
+simplepatern1    :  simplelef
+                    |  simplepatern1 "." ID
+patvar            :  VARID
+                    |  "_"
+paterns          :  patern ("," patern)*
+argumentpaterns  :  "(" [paterns] ")"                                     
+                    |  "(" [paterns ","] patvar "*" ")"
+
+
+clstypeparamclause:  "[" clstypeparam ("," clstypeparam)* "]"
+clstypeparam      :  (anotation)* ["+" | "-"] ID [hktypeparamclause] typeparambounds                
+
+typtypeparamclause:  "[" typtypeparam ("," typtypeparam)* "]"
+typtypeparam      :  (anotation)* ID [hktypeparamclause] typebounds
+
+hktypeparamclause :  "[" hktypeparam ("," hktypeparam)* "]"
+hktypeparam       :  (anotation)* ["+" | "-"] (ID [hktypeparamclause] | "_") typebounds
+
+clsparamclauses   :  (clsparamclause)* [[NL] "(" ["implicit"] clsparams ")"]
+clsparamclause    :  [NL] "(" clsparams ")"
+                    |  [NL] "(" "using" (clsparams | funargtypes) ")"
+clsparams         :  clsparam ("," clsparam)*
+clsparam          :  (anotation)* [(modifier)* ("val" | "var") | "inline"] param
+
+defparamclauses   :  defparamclause ( defparamclause )* //two DefTypeParamClause cannot be adjacent
+defparamclause    :  deftypeparamclause
+                    |  deftermparamclause
+                    |  usingparamclause
+typelesclauses   :  typelesclause (typelesclause)*
+typelesclause    :  deftermparamclause
+                    |  usingparamclause
+
+deftypeparamclause:  [NL] "[" deftypeparam ("," deftypeparam)* "]"
+deftypeparam      :  (anotation)* ID [hktypeparamclause] typeparambounds
+deftermparamclause:  [NL] "(" [deftermparams] ")"
+usingparamclause  :  [NL] "(" "using" (deftermparams | funargtypes) ")"
+defimplicitclause :  [NL] "(" "implicit" deftermparams ")"
+
+deftermparams     : deftermparam ("," deftermparam)*
+deftermparam      : (anotation)* ["erased"] ["inline"] param                 
+param             :  ID ":" paramtype ["=" expr]
+
+bindings          :  "("["erased"] [binding ("," ["erased"] binding)*] ")"
+binding           :  (ID | "_") [":" type]                                 
+
+modifier          :  LOCALMODIFIER
+                    |  accsessmodifier
+                    |  "override"
+                    |  "opaque"
+LOCALMODIFIER     :  "abstract"
+                    |  "final"
+                    |  "sealed"
+                    |  "open"
+                    |  "implicit"
+                    |  "lazy"
+                    |  "inline"
+accsessmodifier    :  ("private" | "protected") [accsesqorifier]
+accsesqorifier   :  "[" ID "]"
+
+anotation        :  "@" simpletype1 (parargumentexprs)*                     
+
+import            :  "import" importexpr ("," importexpr)*
+export            :  "export" importexpr ("," importexpr)*
+importexpr        :  simplelef ("." ID)* "." importspec                     
+                    |  simplelef "as" ID                                   
+importspec        :  namedselector
+                    |  wildcardselector
+                    | "{" importselectors "}"  //"{" importselectors) "}"
+namedselector     :  ID ["as" (ID | "_")]
+wildcardselector  :  "*" | "given" [infixtype]
+importselectors   :  namedselector ["," importselectors]
+                    |  wildcardselector ("," wildcardselector)*
+
+endmarker         :  "end" ENDMARKERTAG   
+ENDMARKERTAG      :  ID | "if" | "while" | "for" | "match" | "try"
+                    |  "new" | "this" | "given" | "extension" | "val"
+
+refinedef         :  "val" patdef//valdef
+                    |  "def" defdef
+                    |  "type" (NL)* typedef
+
+def               :  "val" patdef
+                    |  "var" patdef
+                    |  "def" defdef
+                    |  "type" (NL)* typedef
+                    |  tmpldef
+patdef            :  ids [":" type] ["=" expr]
+                    |  patern2 [":" type] ["=" expr]                         
+defdef            :  defsig [":" type] ["=" expr]                        
+                    |  "this" typelesclauses [defimplicitclause] "=" constrexpr    
+defsig            :  ID [defparamclauses] [defimplicitclause]
+typedef           :  ID [typtypeparamclause] (funparamclause)* typebounds ["=" type] //typeparamclause
+
+tmpldef           :  (["case"] "class" | "trait") clasdef
+                    |  ["case"] "object" objectdef
+                    |  "enum" enumdef
+                    |  "given" givendef
+clasdef          :  ID clasconstr [template]                             
+clasconstr       :  [clstypeparamclause] [constrmods] clsparamclauses      
+constrmods        :  (anotation)* [accsessmodifier]
+objectdef         :  ID [template]                                           
+enumdef           :  ID clasconstr inheritclauses enumbody
+givendef          :  [givensig] (annottype ["=" expr] | structuralinstance)
+givensig          :  [ID] [deftypeparamclause] (usingparamclause)* ":" //one of `ID`, `DefTypeParamClause`, `UsingParamClause` must be present     
+structuralinstance :  constrap ("with" constrap)* ["with" withtemplatebody]
+extension         :  "extension" [deftypeparamclause] (usingparamclause)* "(" deftermparam ")" (usingparamclause)* extmethods
+extmethods        :  extmethod 
+                    | [NL] "<<<" extmethod (SEMI extmethod)* ">>>"
+                    | [NL] "{" extmethod (SEMI extmethod)* "}"
+extmethod         :  (anotation [NL])* (modifier)* "def" defdef
+                    |  export
+template          :  inheritclauses [templatebody]
+inheritclauses    :  ["extends" constraps] ["derives" qualid ("," qualid)*]
+constraps        :  constrap (("," constrap)* | ("with" constrap)*)
+constrap         :  simpletype1 (anotation)* (parargumentexprs)*
+constrexpr        :  selfinvocation
+                    |  "<<<" selfinvocation (SEMI blockstat)* ">>>"
+                    |  "{" selfinvocation (SEMI blockstat)* "}"
+selfinvocation    :  "this" argumentexprs (argumentexprs)*
+
+withtemplatebody  :  "<<<" [selftype] templatestat (SEMI templatestat)* ">>>"
+                    | "{" [selftype] templatestat (SEMI templatestat)* "}"
+templatebody      :  ":" [NL] "<<<" [selftype] templatestat (SEMI templatestat)* ">>>"
+                    | [NL] "{" [selftype] templatestat (SEMI templatestat)* "}"
+templatestat      :  import
+                    |  export
+                    |  (anotation [NL])* (modifier)* def
+                    //|  (anotation [NL])* (modifier)* dcl
+                    |  extension
+                    |  expr1
+                    |  endmarker
+                    //|
+selftype          :  ID [":" infixtype] "=>"                             
+                    |  "this" ":" infixtype "=>"
+
+enumbody          :  ":" "<<<" [selftype] enumstat (SEMI enumstat)* ">>>"
+                    | [NL] "{" [selftype] enumstat (SEMI enumstat)* "}"
+enumstat          :  templatestat
+                    |  (anotation [NL])* (modifier)* enumcase
+enumcase          :  "case" (ID clasconstr ["extends" constraps] | ids)
+
+topstatus          :  topstat (SEMI topstat)*
+topstat           :  import
+                    |  export
+                    |  (anotation [NL])* (modifier)* def
+                    |  extension
+                    |  packaging
+                    |  packageobject
+                    |  endmarker
+                    //|
+packaging         :  "package" qualid ":" "<<<" topstatus ">>>"
+                    |  "package" qualid [NL] "{" topstatus "}"
+packageobject     :  "package" "object" objectdef
+
+compilationunit   :  ("package" qualid SEMI)* topstatus
+
+%import common.WS
+%ignore WS
+%ignore COMMENT
