@@ -11,3 +11,7 @@
 - 問題の難易度の数値化: /difficulty_check
 
 各フォルダ内のmainで始まるファイルが、機能を使用するのに利用できます。
+
+なお、code_minimizeとalternative_searchで行っているScalaコードのコンパイルにはscala-cliを使用しています。Scala-cliは起動に少し時間がかかるため、まず一度scala-cliを使用してから各機能を使用し始めてください。(もしくはuse_cliを換えることで、お好みの環境を使用することもできます。)
+
+またalternative_searchとdifficulty_checkでは、EBNF解析のためにPythonのライブラリであるLarkを使用しています。
