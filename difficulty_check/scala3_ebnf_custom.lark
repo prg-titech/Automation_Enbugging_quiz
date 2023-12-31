@@ -147,7 +147,7 @@ types             :  type ("," type)*
 expr              :  funparams ("=>" | "?=>") expr    //here                     
                     |  hktypeparamclause "=>" expr                        
                     |  expr1
-blockresult       :  funparams ("=>" | "?=>") block //here 
+blockresult.1       :  funparams ("=>" | "?=>") block //here 
                     |  hktypeparamclause "=>" block
                     |  expr1
 funparams         :  bindings

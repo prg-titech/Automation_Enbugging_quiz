@@ -18,6 +18,7 @@ def make_tree(tree,default_node):
     def sub_make(subtree,default_node,id):
         now_id = id
         node_value = get_children_label(subtree)
+        #node_value = subtree.data.value
         this_node = Node(node_value,parent=default_node,id_num = now_id,label = subtree.data.value,is_Tree = True)
         all_labels.add(subtree.data.value)
         now_id += 1
@@ -59,7 +60,7 @@ def common(node1,node2,matching):
 
 
 def compare_child_leaf(node1,node2,matching):
-    return common(node1,node2,matching) > 0.5
+    return common(node1,node2,matching) >= 0.5
 
 def leaf_compare(node1,node2):
     return node1.label == node2.label
@@ -67,8 +68,6 @@ def leaf_compare(node1,node2):
 def make_tree_from_lark(before_code:str,after_code:str,parser_for_changeplace):
     lark_ast1 = parser_for_changeplace.parse(before_code)
     lark_ast2 = parser_for_changeplace.parse(after_code)
-
-    #print(tree.pretty())
 
     default_node1 = Node("Root",parent=None,id_num = -1,display = "Root",is_rule = True,label = 'Root')
     default_node2 = Node("Root",parent=None,id_num = -1,display = "Root",is_rule = True,label = 'Root')
