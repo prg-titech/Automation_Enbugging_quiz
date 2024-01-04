@@ -174,7 +174,16 @@ class evaluating_quiz_difficulty:
         if editable_snippet in self.target_msg:
             return 1
         else:
-            return 0
+            separeted_snippet = editable_snippet.split()
+            if len(separeted_snippet) == 0:
+                return 0
+            else:
+                num_of_in_msg = 0
+                for one_string in separeted_snippet:
+                    if one_string in self.target_msg:
+                        num_of_in_msg += 1
+
+                return num_of_in_msg / len(separeted_snippet)
 
     def get_editableplace_score(self,editable_place):
         self.editableplace_score_dict[editable_place] = (self.editable_place_msg_score(editable_place),self.is_editable_place_snippet_in_msg(editable_place))
