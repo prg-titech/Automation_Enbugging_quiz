@@ -27,3 +27,6 @@ def get_attached_place(code:str,original_palce):
 def get_original_start_pos(attached_code:str,attached_start:int):
     decriment = (attached_code[:attached_start].count('\n')-1)*len(indent) + len(attach_head)
     return attached_start - decriment
+
+def remove_attach_something(code):
+    return remove_indent(code.splitlines()[2:-1])
