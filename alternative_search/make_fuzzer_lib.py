@@ -51,6 +51,7 @@ class make_fuzzer_from_quiz_code:
             return {},set()
         
         ans_dict = {}
+        print(change_key_name)
 
         if hasattr(self.lexical_tokens,change_key_name.lower()):
             ans_dict['in_terminal'] = getattr(self.lexical_tokens,change_key_name.lower()) | self.lexical_tokens.wildcard_id

@@ -37,7 +37,8 @@ class scala3_lexical_tokens():
     nl = {'\n'}
     semi = {';'}.union(nl)
     colon = {':'}
-    simpleliteral = integernumeral|set(map(lambda x:'-'+x,integernumeral))|floatingpointliteral|set(map(lambda x:'-'+x,floatingpointliteral))|booleanliteral| characterliteral| stringliteral
+    default_simpleliteral = integernumeral|set(map(lambda x:'-'+x,integernumeral))|floatingpointliteral|set(map(lambda x:'-'+x,floatingpointliteral))|booleanliteral| characterliteral| stringliteral
+    simpleliteral = default_simpleliteral
     literal = simpleliteral|{'null'}
     escape = {'\$\$', '\$"', '\$'}
     prefixoperater =  {"-" , "+" , "~" ,"!" }
@@ -58,20 +59,38 @@ class scala3_lexical_tokens():
     keyword = {'abstract','case','catch','class','def','do','else','enum','export','extends','false','final','finally','for','given','if','implicit','import','lazy','match','new','null','object','override','package','private','protected','return','sealed','super','then','throw','trait','true','try','type','val','var','while','with','yield'}
     wildcard_id = set()
 
-    def __init__(self,get_ids,splited_strs:list):
-        for one_id in get_ids:
-            if check_upper.match(one_id):
-                self.alphaid.add(one_id)
-            elif check_lower.match(one_id):
-                self.varid.add(one_id)
-            else:
-                self.op.add(one_id)
+    def __init__(self,get_things_dict,splited_strs:list):
+        self.alphaid = set()
+        self.varid = set()
+        self.plainid = set()
+        self.id = set()
+        self.wildcard_id = set()
+        self.op = self.opchar|self.op_collection|self.op_relational|self.op_logical|self.op_arithmetic
+        self.simpleliteral = self.default_simpleliteral
+
+        if 'ID' in get_things_dict:
+            for one_id in get_things_dict['ID']:
+                if check_upper.match(one_id):
+                    self.alphaid.add(one_id)
+                elif check_lower.match(one_id):
+                    self.varid.add(one_id)
+                else:
+                    self.op.add(one_id)
         self.alphaid = self.alphaid.union(self.varid)
-        self.plainid = self.alphaid | self.op
+        self.plainid = self.alphaid | self.op        
+        if 'SIMPLELITERAL' in get_things_dict:
+            self.simpleliteral |= get_things_dict['SIMPLELITERAL']
+
+        self.literal =  self.simpleliteral|{'null'}
+
+        if 'LITERAL' in get_things_dict:
+            self.literal |= get_things_dict['LITERAL']
+
         self.id = self.plainid | self.Chatnobackquotrornewline | self.simpleliteral | {get_fresh_val(self.plainid)} | self.Types | self.Collection_type
 
         for one_str in splited_strs:
             if not one_str in self.keyword:
                 self.wildcard_id.add(one_str)
+        
 
         self.all_tokens = self.wildcard_id|self.id|self.semi|self.colon|self.keyword|self.endmarkertag|self.localmodifier|self.prefixoperater|self.escape|{'null'}|self.escapeseq

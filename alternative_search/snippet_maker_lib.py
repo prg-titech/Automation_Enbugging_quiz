@@ -166,7 +166,7 @@ class making_grammertical_example():
                     for one_candit in candidates:
                         if one_candit != '':
                             strings = clean_split(one_candit)
-                            repetable_times = limit_length2 % len(strings)
+                            repetable_times = limit_length2 // len(strings)
                             ans |= duplicate_strings(strings,repetable_times,1)
                     return ans  
                 
@@ -178,7 +178,7 @@ class making_grammertical_example():
                         ans.add('')
                     else:
                         strings = clean_split(one_candit)
-                        repetable_times = limit_length2 % len(strings)
+                        repetable_times = limit_length2 // len(strings)
                         ans |= duplicate_strings(strings,repetable_times,1)
                 return ans   
                 
@@ -195,7 +195,7 @@ class making_grammertical_example():
                         ans.add('')
                     else:
                         strings = clean_split(one_candit)
-                        repetable_times = limit_length2 % len(strings)
+                        repetable_times = limit_length2 // len(strings)
                         if repetable_times >= start:
                             max_repeat = min(repetable_times,stop)
                             ans |= set(duplicate_strings(strings,max_repeat,start))
