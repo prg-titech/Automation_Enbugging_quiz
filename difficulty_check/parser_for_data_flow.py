@@ -94,16 +94,16 @@ class dataflow_compiler(Interpreter):
             one_label = []
             if is_typed:
                 if not is_expr:
-                    one_label += typelabels[i]
+                    one_label += [typelabels[i]]
                 else:
                     self.dependency_dict[exprlabels[i]] += typelabels[i]
-                    one_label += exprlabels[i]
+                    one_label += [exprlabels[i]]
             elif is_expr:
-                one_label += exprlabels[i]
-
-            key_tuple = (one_varval,self.scope,one_varval.start_pos,one_varval)
-            self.dependency_dict[key_tuple] = one_label
-            r_list.append(key_tuple)
+                one_label += [exprlabels[i]]
+            # print(one_varval)
+            # key_tuple = (one_varval,self.scope,one_varval.start_pos,one_varval)
+            self.dependency_dict[one_varval] = one_label
+            r_list.append(one_varval)
             i+=1
         return r_list
         
